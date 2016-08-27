@@ -56,7 +56,7 @@ func (c *Chip8) Initialize() {
 func (c *Chip8) Cycle() {
 	c.Opcode = uint16(c.Memory[c.PC])<<8 | uint16(c.Memory[c.PC+1])
 	a := uint16(c.Opcode & 0xf000)
-	//b := byte(c.Opcode & 0x0fff)
+	b := uint16(c.Opcode & 0x0fff)
 
 	switch a {
 	case System:
@@ -69,21 +69,56 @@ func (c *Chip8) Cycle() {
 		c.Draw = true
 
 	case Return:
+		c.SP--
+		c.PC = c.Stack[c.SP]
+
 	case Jump:
+		c.PC = b
+
 	case Call:
 		c.Stack[c.SP] = c.PC
 		c.SP++
 		c.PC = c.Opcode & 0x0fff
 
 	case SkipIfEqual:
+		if c.V[c.Opcode&0xf0ff] == byte(c.Opcode&0xff00) {
+			c.PC += 2
+		}
+
 	case SkipIfNotEqual:
+		if c.V[c.Opcode&0xf0ff] != byte(c.Opcode&0xff00) {
+			c.PC += 2
+		}
+
 	case SkipIfEqualRegister:
+		if c.V[c.Opcode&0xf0ff] == c.V[c.Opcode&0xff0f] {
+			c.PC += 2
+		}
+
 	case SetValue:
+		c.V[c.Opcode&0xf0ff] = c.V[c.Opcode&0xff0f]
+		c.PC += 2
+
 	case AddValue:
+		c.V[c.Opcode&0xf0ff] = c.V[c.Opcode&0xf0ff] & +byte(c.Opcode&0xff00)
+		c.PC += 2
+
 	case SetRegister:
+		c.V[c.Opcode&0xf0ff] = c.V[c.Opcode&0xff0f]
+		c.PC += 2
+
 	case Or:
+		c.V[c.Opcode&0xf0ff] |= c.V[c.Opcode&0xff0f]
+		c.PC += 2
+
 	case And:
+		c.V[c.Opcode&0xf0ff] &= c.V[c.Opcode&0xff0f]
+		c.PC += 2
+
 	case Xor:
+		c.V[c.Opcode&0xf0ff] ^= c.V[c.Opcode&0xff0f]
+		c.PC += 2
+
 	case AddRegister:
 		if c.V[(c.Opcode&0x00f0)>>4] > (0xff - c.V[(c.Opcode&0x0f00)>>8]) {
 			c.V[0xf] = 1
