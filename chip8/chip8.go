@@ -1,6 +1,9 @@
 package chip8
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+)
 
 type Chip8 struct {
 	Opcode     uint16
@@ -57,6 +60,8 @@ func (c *Chip8) Cycle() {
 	c.Opcode = uint16(c.Memory[c.PC])<<8 | uint16(c.Memory[c.PC+1])
 	a := uint16(c.Opcode & 0xf000)
 	b := uint16(c.Opcode & 0x0fff)
+	xReg := uint16(c.Opcode & 0xf0ff)
+	yReg := uint16(c.Opcode & 0xff0f)
 
 	switch a {
 	case System:
@@ -71,6 +76,7 @@ func (c *Chip8) Cycle() {
 	case Return:
 		c.SP--
 		c.PC = c.Stack[c.SP]
+		c.PC += 2
 
 	case Jump:
 		c.PC = b
@@ -78,45 +84,47 @@ func (c *Chip8) Cycle() {
 	case Call:
 		c.Stack[c.SP] = c.PC
 		c.SP++
-		c.PC = c.Opcode & 0x0fff
+		c.PC = b
 
 	case SkipIfEqual:
-		if c.V[c.Opcode&0xf0ff] == byte(c.Opcode&0xff00) {
+		if c.V[xReg] == byte(c.Opcode&0xff00) {
 			c.PC += 2
 		}
+		c.PC += 2
 
 	case SkipIfNotEqual:
-		if c.V[c.Opcode&0xf0ff] != byte(c.Opcode&0xff00) {
+		if c.V[xReg] != byte(c.Opcode&0xff00) {
 			c.PC += 2
 		}
+		c.PC += 2
 
 	case SkipIfEqualRegister:
-		if c.V[c.Opcode&0xf0ff] == c.V[c.Opcode&0xff0f] {
+		if c.V[xReg] == c.V[yReg] {
 			c.PC += 2
 		}
 
 	case SetValue:
-		c.V[c.Opcode&0xf0ff] = c.V[c.Opcode&0xff0f]
+		c.V[xReg] = c.V[yReg]
 		c.PC += 2
 
 	case AddValue:
-		c.V[c.Opcode&0xf0ff] = c.V[c.Opcode&0xf0ff] & +byte(c.Opcode&0xff00)
+		c.V[xReg] = c.V[xReg] & +byte(c.Opcode&0xff00)
 		c.PC += 2
 
 	case SetRegister:
-		c.V[c.Opcode&0xf0ff] = c.V[c.Opcode&0xff0f]
+		c.V[xReg] = c.V[yReg]
 		c.PC += 2
 
 	case Or:
-		c.V[c.Opcode&0xf0ff] |= c.V[c.Opcode&0xff0f]
+		c.V[xReg] |= c.V[yReg]
 		c.PC += 2
 
 	case And:
-		c.V[c.Opcode&0xf0ff] &= c.V[c.Opcode&0xff0f]
+		c.V[xReg] &= c.V[yReg]
 		c.PC += 2
 
 	case Xor:
-		c.V[c.Opcode&0xf0ff] ^= c.V[c.Opcode&0xff0f]
+		c.V[xReg] ^= c.V[yReg]
 		c.PC += 2
 
 	case AddRegister:
@@ -129,16 +137,50 @@ func (c *Chip8) Cycle() {
 		c.PC += 2
 
 	case SubtractYFromX:
+		if c.V[xReg] < c.V[yReg] {
+			c.V[0xf] = 0
+		} else {
+			c.V[0xf] = 1
+		}
+		c.V[xReg] = c.V[xReg] & -c.V[yReg]
+		c.PC += 2
+
 	case ShiftRight:
+		c.V[0xf] = c.V[xReg] & 1
+		c.V[xReg] >>= 1
+		c.PC += 2
+
 	case SubtractXFromY:
+		if c.V[yReg] < c.V[xReg] {
+			c.V[0xf] = 0
+		} else {
+			c.V[0xf] = 1
+		}
+		c.V[xReg] = c.V[yReg] & -c.V[xReg]
+		c.PC += 2
+
 	case ShiftLeft:
+		c.V[0xf] = (c.V[xReg] & 0x08) >> 7
+		c.V[xReg] <<= 1
+		c.PC += 2
+
 	case SkipIfNotEqualRegister:
+		if c.V[xReg] != c.V[yReg] {
+			c.PC += 2
+		}
+		c.PC += 2
+
 	case SetIndex:
 		c.I = c.Opcode & 0x0fff
 		c.PC += 2
 
 	case JumpRelative:
+		c.PC = b + uint16(c.V[0])
+
 	case AndRandom:
+		c.V[xReg] = byte(rand.Int()) & byte(c.Opcode&0xff00)
+		c.PC += 2
+
 	case Draw:
 		x := uint16(c.V[(c.Opcode&0x0f00)>>8])
 		y := uint16(c.V[(c.Opcode&0x00f0)>>4])
@@ -161,24 +203,42 @@ func (c *Chip8) Cycle() {
 
 	case SkipIfKeyPressed:
 		if c.Key[c.V[(c.Opcode&0x0f00)>>8]] != 0 {
-			c.PC += 4
-		} else {
 			c.PC += 2
 		}
+		c.PC += 2
 
 	case SkipIfKeyNotPressed:
-		if c.Key[c.V[(c.Opcode&0x0f00)>>8]] != 0 {
+		if c.Key[c.V[(c.Opcode&0x0f00)>>8]] == 0 {
 			c.PC += 2
-		} else {
-			c.PC += 4
 		}
+		c.PC += 2
 
 	case StoreDelayTimer:
+		c.V[xReg] = c.DelayTimer
+		c.PC += 2
+
 	case AwaitKeyPress:
+		//TODO Implement
+
 	case SetDelayTimer:
+		c.DelayTimer = c.V[xReg]
+
 	case SetSoundTimer:
+		c.SoundTimer = c.V[xReg]
+
 	case AddIndex:
+		if (uint16(c.V[xReg]) + c.I) > uint16(0xfff) {
+			c.V[0xf] = 1
+		} else {
+			c.V[0xf] = 0
+		}
+		c.I += uint16(c.V[xReg])
+		c.PC += 2
+
 	case SetIndexFontCharacter:
+		c.I = uint16(c.V[xReg] * 5)
+		c.PC += 2
+
 	case StoreBCD:
 		c.Memory[c.I] = c.V[(c.Opcode&0x0f00)>>8] / 100
 		c.Memory[c.I+1] = (c.V[(c.Opcode&0x0f00)>>8] / 10) % 10
@@ -186,7 +246,17 @@ func (c *Chip8) Cycle() {
 		c.PC += 2
 
 	case WriteMemory:
+		for i := uint16(0); i < xReg; i++ {
+			c.Memory[c.I+i] = c.V[i]
+		}
+		c.PC += 2
+
 	case ReadMemory:
+		for i := uint16(0); i < xReg; i++ {
+			c.V[i] = c.Memory[c.I+i]
+		}
+		c.PC += 2
+
 	default:
 		panic(fmt.Sprintf("Unknown opcode: 0x%X", c.Opcode))
 	}
