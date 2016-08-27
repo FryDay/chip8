@@ -115,6 +115,9 @@ func (c *Chip8) Cycle() {
 		c.PC += 2
 
 	case SetRegister:
+		fmt.Printf("0x%X\n", c.Opcode)
+		fmt.Printf("0x%X\n", xReg)
+		fmt.Printf("0x%X\n", yReg)
 		c.V[xReg] = c.V[yReg]
 		c.PC += 2
 
@@ -270,5 +273,11 @@ func (c *Chip8) Cycle() {
 	if c.SoundTimer > 0 {
 		fmt.Println("BEEP")
 		c.SoundTimer--
+	}
+}
+
+func (c *Chip8) LoadROM(r []byte) {
+	for i := range r {
+		c.Memory[i+512] = r[i]
 	}
 }

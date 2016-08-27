@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"io/ioutil"
 
 	"github.com/FryDay/chip8/chip8"
 )
@@ -12,17 +12,14 @@ func main() {
 	//input
 
 	chip8.Initialize()
-	//loadRom
+	rom, _ := ioutil.ReadFile("./roms/BLINKY")
+	chip8.LoadROM(rom)
 
-	chip8.Memory[chip8.PC] = 0xA2
-	chip8.Memory[chip8.PC+1] = 0xF0
-	fmt.Printf("0x%X\n", chip8.Opcode)
-	chip8.Cycle()
-	fmt.Printf("0x%X\n", chip8.Opcode)
+	//fmt.Println(chip8.Memory)
 
-	// for {
-	// 	chip8.Cycle()
-	//if draw flag then draw
-	//set keys
-	// }
+	for {
+		chip8.Cycle()
+		// if draw flag then draw
+		// set keys
+	}
 }
