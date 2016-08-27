@@ -1,11 +1,15 @@
 package chip8
 
+import "fmt"
+
 type Chip8 struct {
 	Opcode     uint16
 	Memory     [4096]byte
 	V          [16]byte
 	I          uint16
 	PC         uint16
+	Draw       bool
+	Display    [64 * 32]byte
 	DelayTimer byte
 	SoundTimer byte
 	Stack      [16]uint16
@@ -34,11 +38,11 @@ var font = [80]byte{
 
 func (c *Chip8) Initialize() {
 	c.PC = 0x200
-	//opcode
+	c.Opcode = 0
 	c.I = 0
 	c.SP = 0
 
-	//clear display
+	c.Draw = false
 	//clear Stack
 	//clear registers V0-VF
 	//clear memory
@@ -50,11 +54,113 @@ func (c *Chip8) Initialize() {
 }
 
 func (c *Chip8) Cycle() {
-	// Fetch opcode
-	start := uint16(c.Memory[c.PC])
-	start = start << 8
-	c.Opcode = uint16(start | uint16(c.Memory[c.PC+1]))
-	//decode opcode
-	//execute opcode
-	//update timers
+	c.Opcode = uint16(c.Memory[c.PC])<<8 | uint16(c.Memory[c.PC+1])
+	a := uint16(c.Opcode & 0xf000)
+	//b := byte(c.Opcode & 0x0fff)
+
+	switch a {
+	case System:
+		panic(fmt.Sprintln("The internet tells me this shouldn't happen..."))
+
+	case Clear:
+		for i := range c.Display {
+			c.Display[i] = 0
+		}
+		c.Draw = true
+
+	case Return:
+	case Jump:
+	case Call:
+		c.Stack[c.SP] = c.PC
+		c.SP++
+		c.PC = c.Opcode & 0x0fff
+
+	case SkipIfEqual:
+	case SkipIfNotEqual:
+	case SkipIfEqualRegister:
+	case SetValue:
+	case AddValue:
+	case SetRegister:
+	case Or:
+	case And:
+	case Xor:
+	case AddRegister:
+		if c.V[(c.Opcode&0x00f0)>>4] > (0xff - c.V[(c.Opcode&0x0f00)>>8]) {
+			c.V[0xf] = 1
+		} else {
+			c.V[0xf] = 0
+		}
+		c.V[(c.Opcode&0x0f00)>>8] += c.V[(c.Opcode&0x00f0)>>4]
+		c.PC += 2
+
+	case SubtractYFromX:
+	case ShiftRight:
+	case SubtractXFromY:
+	case ShiftLeft:
+	case SkipIfNotEqualRegister:
+	case SetIndex:
+		c.I = c.Opcode & 0x0fff
+		c.PC += 2
+
+	case JumpRelative:
+	case AndRandom:
+	case Draw:
+		x := uint16(c.V[(c.Opcode&0x0f00)>>8])
+		y := uint16(c.V[(c.Opcode&0x00f0)>>4])
+		height := uint16(c.Opcode & 0x000f)
+		var pixel uint16
+		c.V[0xf] = 0
+		for yLine := uint16(0); yLine < height; yLine++ {
+			pixel = uint16(c.Memory[c.I+yLine])
+			for xLine := uint16(0); xLine < 8; xLine++ {
+				if (pixel & (0x80 >> xLine)) != 0 {
+					if c.Display[x+xLine+((y+yLine)*64)] == 1 {
+						c.V[0xf] = 1
+						c.Display[x+xLine+((y+yLine)*64)] ^= 1
+					}
+				}
+			}
+		}
+		c.Draw = true
+		c.PC += 2
+
+	case SkipIfKeyPressed:
+		if c.Key[c.V[(c.Opcode&0x0f00)>>8]] != 0 {
+			c.PC += 4
+		} else {
+			c.PC += 2
+		}
+
+	case SkipIfKeyNotPressed:
+		if c.Key[c.V[(c.Opcode&0x0f00)>>8]] != 0 {
+			c.PC += 2
+		} else {
+			c.PC += 4
+		}
+
+	case StoreDelayTimer:
+	case AwaitKeyPress:
+	case SetDelayTimer:
+	case SetSoundTimer:
+	case AddIndex:
+	case SetIndexFontCharacter:
+	case StoreBCD:
+		c.Memory[c.I] = c.V[(c.Opcode&0x0f00)>>8] / 100
+		c.Memory[c.I+1] = (c.V[(c.Opcode&0x0f00)>>8] / 10) % 10
+		c.Memory[c.I+2] = (c.V[(c.Opcode&0x0f00)>>8] % 100) % 10
+		c.PC += 2
+
+	case WriteMemory:
+	case ReadMemory:
+	default:
+		panic(fmt.Sprintf("Unknown opcode: 0x%X", c.Opcode))
+	}
+
+	if c.DelayTimer > 0 {
+		c.DelayTimer--
+	}
+	if c.SoundTimer > 0 {
+		fmt.Println("BEEP")
+		c.SoundTimer--
+	}
 }
