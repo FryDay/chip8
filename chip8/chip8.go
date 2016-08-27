@@ -1,6 +1,7 @@
 package chip8
 
 type Chip8 struct {
+	Opcode     uint16
 	Memory     [4096]byte
 	V          [16]byte
 	I          uint16
@@ -49,7 +50,10 @@ func (c *Chip8) Initialize() {
 }
 
 func (c *Chip8) Cycle() {
-	//fetch opcode
+	// Fetch opcode
+	start := uint16(c.Memory[c.PC])
+	start = start << 8
+	c.Opcode = uint16(start | uint16(c.Memory[c.PC+1]))
 	//decode opcode
 	//execute opcode
 	//update timers
