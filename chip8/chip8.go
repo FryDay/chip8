@@ -6,18 +6,18 @@ import (
 )
 
 type Chip8 struct {
-	Opcode     uint16
-	Memory     [4096]byte
-	V          [16]byte
-	I          uint16
-	PC         uint16
-	Draw       bool
-	Display    [64 * 32]byte
-	DelayTimer byte
-	SoundTimer byte
-	Stack      [16]uint16
-	SP         uint16
-	Key        [16]byte
+	opcode     uint16
+	memory     [4096]byte
+	v          [16]byte
+	i          uint16
+	pc         uint16
+	draw       bool
+	display    [64 * 32]byte
+	delayTimer byte
+	soundTimer byte
+	stack      [16]uint16
+	sp         uint16
+	key        [16]byte
 }
 
 var font = [80]byte{
@@ -40,244 +40,244 @@ var font = [80]byte{
 }
 
 func (c *Chip8) Initialize() {
-	c.PC = 0x200
-	c.Opcode = 0
-	c.I = 0
-	c.SP = 0
+	c.pc = 0x200
+	c.opcode = 0
+	c.i = 0
+	c.sp = 0
 
-	c.Draw = false
+	c.draw = false
 	for i := 0; i < 16; i++ {
-		c.Stack[i] = 0
-		c.V[i] = 0
+		c.stack[i] = 0
+		c.v[i] = 0
 	}
-	for i := range c.Memory {
-		c.Memory[i] = 0
+	for i := range c.memory {
+		c.memory[i] = 0
 	}
 
 	for i := 0; i < 80; i++ {
-		c.Memory[i] = font[i]
+		c.memory[i] = font[i]
 	}
 }
 
 func (c *Chip8) Cycle() {
-	c.Opcode = uint16(c.Memory[c.PC])<<8 | uint16(c.Memory[c.PC+1])
-	a := uint16(c.Opcode & 0xf000)
-	b := uint16(c.Opcode & 0x0fff)
-	xReg := uint16(c.Opcode & 0xf0ff)
-	yReg := uint16(c.Opcode & 0xff0f)
+	c.opcode = uint16(c.memory[c.pc])<<8 | uint16(c.memory[c.pc+1])
+	a := uint16(c.opcode & 0xf000)
+	b := uint16(c.opcode & 0x0fff)
+	xReg := uint16(c.opcode & 0xf0ff)
+	yReg := uint16(c.opcode & 0xff0f)
 
 	switch a {
-	case System:
+	case opSystem:
 		panic(fmt.Sprintln("The internet tells me this shouldn't happen..."))
 
-	case Clear:
-		for i := range c.Display {
-			c.Display[i] = 0
+	case opClear:
+		for i := range c.display {
+			c.display[i] = 0
 		}
-		c.Draw = true
+		c.draw = true
 
-	case Return:
-		c.SP--
-		c.PC = c.Stack[c.SP]
-		c.PC += 2
+	case opReturn:
+		c.sp--
+		c.pc = c.stack[c.sp]
+		c.pc += 2
 
-	case Jump:
-		c.PC = b
+	case opJump:
+		c.pc = b
 
-	case Call:
-		c.Stack[c.SP] = c.PC
-		c.SP++
-		c.PC = b
+	case opCall:
+		c.stack[c.sp] = c.pc
+		c.sp++
+		c.pc = b
 
-	case SkipIfEqual:
-		if c.V[xReg] == byte(c.Opcode&0xff00) {
-			c.PC += 2
+	case opSkipIfEqual:
+		if c.v[xReg] == byte(c.opcode&0xff00) {
+			c.pc += 2
 		}
-		c.PC += 2
+		c.pc += 2
 
-	case SkipIfNotEqual:
-		if c.V[xReg] != byte(c.Opcode&0xff00) {
-			c.PC += 2
+	case opSkipIfNotEqual:
+		if c.v[xReg] != byte(c.opcode&0xff00) {
+			c.pc += 2
 		}
-		c.PC += 2
+		c.pc += 2
 
-	case SkipIfEqualRegister:
-		if c.V[xReg] == c.V[yReg] {
-			c.PC += 2
+	case opSkipIfEqualRegister:
+		if c.v[xReg] == c.v[yReg] {
+			c.pc += 2
 		}
 
-	case SetValue:
-		c.V[xReg] = c.V[yReg]
-		c.PC += 2
+	case opSetValue:
+		c.v[xReg] = c.v[yReg]
+		c.pc += 2
 
-	case AddValue:
-		c.V[xReg] = c.V[xReg] & +byte(c.Opcode&0xff00)
-		c.PC += 2
+	case opAddValue:
+		c.v[xReg] = c.v[xReg] & +byte(c.opcode&0xff00)
+		c.pc += 2
 
-	case SetRegister:
-		fmt.Printf("0x%X\n", c.Opcode)
+	case opSetRegister:
+		fmt.Printf("0x%X\n", c.opcode)
 		fmt.Printf("0x%X\n", xReg)
 		fmt.Printf("0x%X\n", yReg)
-		c.V[xReg] = c.V[yReg]
-		c.PC += 2
+		c.v[xReg] = c.v[yReg]
+		c.pc += 2
 
-	case Or:
-		c.V[xReg] |= c.V[yReg]
-		c.PC += 2
+	case opOr:
+		c.v[xReg] |= c.v[yReg]
+		c.pc += 2
 
-	case And:
-		c.V[xReg] &= c.V[yReg]
-		c.PC += 2
+	case opAnd:
+		c.v[xReg] &= c.v[yReg]
+		c.pc += 2
 
-	case Xor:
-		c.V[xReg] ^= c.V[yReg]
-		c.PC += 2
+	case opXor:
+		c.v[xReg] ^= c.v[yReg]
+		c.pc += 2
 
-	case AddRegister:
-		if c.V[(c.Opcode&0x00f0)>>4] > (0xff - c.V[(c.Opcode&0x0f00)>>8]) {
-			c.V[0xf] = 1
+	case opAddRegister:
+		if c.v[(c.opcode&0x00f0)>>4] > (0xff - c.v[(c.opcode&0x0f00)>>8]) {
+			c.v[0xf] = 1
 		} else {
-			c.V[0xf] = 0
+			c.v[0xf] = 0
 		}
-		c.V[(c.Opcode&0x0f00)>>8] += c.V[(c.Opcode&0x00f0)>>4]
-		c.PC += 2
+		c.v[(c.opcode&0x0f00)>>8] += c.v[(c.opcode&0x00f0)>>4]
+		c.pc += 2
 
-	case SubtractYFromX:
-		if c.V[xReg] < c.V[yReg] {
-			c.V[0xf] = 0
+	case opSubtractYFromX:
+		if c.v[xReg] < c.v[yReg] {
+			c.v[0xf] = 0
 		} else {
-			c.V[0xf] = 1
+			c.v[0xf] = 1
 		}
-		c.V[xReg] = c.V[xReg] & -c.V[yReg]
-		c.PC += 2
+		c.v[xReg] = c.v[xReg] & -c.v[yReg]
+		c.pc += 2
 
-	case ShiftRight:
-		c.V[0xf] = c.V[xReg] & 1
-		c.V[xReg] >>= 1
-		c.PC += 2
+	case opShiftRight:
+		c.v[0xf] = c.v[xReg] & 1
+		c.v[xReg] >>= 1
+		c.pc += 2
 
-	case SubtractXFromY:
-		if c.V[yReg] < c.V[xReg] {
-			c.V[0xf] = 0
+	case opSubtractXFromY:
+		if c.v[yReg] < c.v[xReg] {
+			c.v[0xf] = 0
 		} else {
-			c.V[0xf] = 1
+			c.v[0xf] = 1
 		}
-		c.V[xReg] = c.V[yReg] & -c.V[xReg]
-		c.PC += 2
+		c.v[xReg] = c.v[yReg] & -c.v[xReg]
+		c.pc += 2
 
-	case ShiftLeft:
-		c.V[0xf] = (c.V[xReg] & 0x08) >> 7
-		c.V[xReg] <<= 1
-		c.PC += 2
+	case opShiftLeft:
+		c.v[0xf] = (c.v[xReg] & 0x08) >> 7
+		c.v[xReg] <<= 1
+		c.pc += 2
 
-	case SkipIfNotEqualRegister:
-		if c.V[xReg] != c.V[yReg] {
-			c.PC += 2
+	case opSkipIfNotEqualRegister:
+		if c.v[xReg] != c.v[yReg] {
+			c.pc += 2
 		}
-		c.PC += 2
+		c.pc += 2
 
-	case SetIndex:
-		c.I = c.Opcode & 0x0fff
-		c.PC += 2
+	case opSetIndex:
+		c.i = c.opcode & 0x0fff
+		c.pc += 2
 
-	case JumpRelative:
-		c.PC = b + uint16(c.V[0])
+	case opJumpRelative:
+		c.pc = b + uint16(c.v[0])
 
-	case AndRandom:
-		c.V[xReg] = byte(rand.Int()) & byte(c.Opcode&0xff00)
-		c.PC += 2
+	case opAndRandom:
+		c.v[xReg] = byte(rand.Int()) & byte(c.opcode&0xff00)
+		c.pc += 2
 
-	case Draw:
-		x := uint16(c.V[(c.Opcode&0x0f00)>>8])
-		y := uint16(c.V[(c.Opcode&0x00f0)>>4])
-		height := uint16(c.Opcode & 0x000f)
+	case opDraw:
+		x := uint16(c.v[(c.opcode&0x0f00)>>8])
+		y := uint16(c.v[(c.opcode&0x00f0)>>4])
+		height := uint16(c.opcode & 0x000f)
 		var pixel uint16
-		c.V[0xf] = 0
+		c.v[0xf] = 0
 		for yLine := uint16(0); yLine < height; yLine++ {
-			pixel = uint16(c.Memory[c.I+yLine])
+			pixel = uint16(c.memory[c.i+yLine])
 			for xLine := uint16(0); xLine < 8; xLine++ {
 				if (pixel & (0x80 >> xLine)) != 0 {
-					if c.Display[x+xLine+((y+yLine)*64)] == 1 {
-						c.V[0xf] = 1
-						c.Display[x+xLine+((y+yLine)*64)] ^= 1
+					if c.display[x+xLine+((y+yLine)*64)] == 1 {
+						c.v[0xf] = 1
+						c.display[x+xLine+((y+yLine)*64)] ^= 1
 					}
 				}
 			}
 		}
-		c.Draw = true
-		c.PC += 2
+		c.draw = true
+		c.pc += 2
 
-	case SkipIfKeyPressed:
-		if c.Key[c.V[(c.Opcode&0x0f00)>>8]] != 0 {
-			c.PC += 2
+	case opSkipIfKeyPressed:
+		if c.key[c.v[(c.opcode&0x0f00)>>8]] != 0 {
+			c.pc += 2
 		}
-		c.PC += 2
+		c.pc += 2
 
-	case SkipIfKeyNotPressed:
-		if c.Key[c.V[(c.Opcode&0x0f00)>>8]] == 0 {
-			c.PC += 2
+	case opSkipIfKeyNotPressed:
+		if c.key[c.v[(c.opcode&0x0f00)>>8]] == 0 {
+			c.pc += 2
 		}
-		c.PC += 2
+		c.pc += 2
 
-	case StoreDelayTimer:
-		c.V[xReg] = c.DelayTimer
-		c.PC += 2
+	case opStoreDelayTimer:
+		c.v[xReg] = c.delayTimer
+		c.pc += 2
 
-	case AwaitKeyPress:
+	case opAwaitKeyPress:
 		//TODO Implement
 
-	case SetDelayTimer:
-		c.DelayTimer = c.V[xReg]
+	case opSetDelayTimer:
+		c.delayTimer = c.v[xReg]
 
-	case SetSoundTimer:
-		c.SoundTimer = c.V[xReg]
+	case opSetSoundTimer:
+		c.soundTimer = c.v[xReg]
 
-	case AddIndex:
-		if (uint16(c.V[xReg]) + c.I) > uint16(0xfff) {
-			c.V[0xf] = 1
+	case opAddIndex:
+		if (uint16(c.v[xReg]) + c.i) > uint16(0xfff) {
+			c.v[0xf] = 1
 		} else {
-			c.V[0xf] = 0
+			c.v[0xf] = 0
 		}
-		c.I += uint16(c.V[xReg])
-		c.PC += 2
+		c.i += uint16(c.v[xReg])
+		c.pc += 2
 
-	case SetIndexFontCharacter:
-		c.I = uint16(c.V[xReg] * 5)
-		c.PC += 2
+	case opSetIndexFontCharacter:
+		c.i = uint16(c.v[xReg] * 5)
+		c.pc += 2
 
-	case StoreBCD:
-		c.Memory[c.I] = c.V[(c.Opcode&0x0f00)>>8] / 100
-		c.Memory[c.I+1] = (c.V[(c.Opcode&0x0f00)>>8] / 10) % 10
-		c.Memory[c.I+2] = (c.V[(c.Opcode&0x0f00)>>8] % 100) % 10
-		c.PC += 2
+	case opStoreBCD:
+		c.memory[c.i] = c.v[(c.opcode&0x0f00)>>8] / 100
+		c.memory[c.i+1] = (c.v[(c.opcode&0x0f00)>>8] / 10) % 10
+		c.memory[c.i+2] = (c.v[(c.opcode&0x0f00)>>8] % 100) % 10
+		c.pc += 2
 
-	case WriteMemory:
+	case opWriteMemory:
 		for i := uint16(0); i < xReg; i++ {
-			c.Memory[c.I+i] = c.V[i]
+			c.memory[c.i+i] = c.v[i]
 		}
-		c.PC += 2
+		c.pc += 2
 
-	case ReadMemory:
+	case opReadMemory:
 		for i := uint16(0); i < xReg; i++ {
-			c.V[i] = c.Memory[c.I+i]
+			c.v[i] = c.memory[c.i+i]
 		}
-		c.PC += 2
+		c.pc += 2
 
 	default:
-		panic(fmt.Sprintf("Unknown opcode: 0x%X", c.Opcode))
+		panic(fmt.Sprintf("Unknown opcode: 0x%X", c.opcode))
 	}
 
-	if c.DelayTimer > 0 {
-		c.DelayTimer--
+	if c.delayTimer > 0 {
+		c.delayTimer--
 	}
-	if c.SoundTimer > 0 {
+	if c.soundTimer > 0 {
 		fmt.Println("BEEP")
-		c.SoundTimer--
+		c.soundTimer--
 	}
 }
 
 func (c *Chip8) LoadROM(r []byte) {
 	for i := range r {
-		c.Memory[i+512] = r[i]
+		c.memory[i+512] = r[i]
 	}
 }
