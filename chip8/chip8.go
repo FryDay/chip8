@@ -46,11 +46,14 @@ func (c *Chip8) Initialize() {
 	c.SP = 0
 
 	c.Draw = false
-	//clear Stack
-	//clear registers V0-VF
-	//clear memory
+	for i := 0; i < 16; i++ {
+		c.Stack[i] = 0
+		c.V[i] = 0
+	}
+	for i := range c.Memory {
+		c.Memory[i] = 0
+	}
 
-	// Load fontset
 	for i := 0; i < 80; i++ {
 		c.Memory[i] = font[i]
 	}
