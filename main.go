@@ -13,19 +13,21 @@ import (
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
-const (
-	screenWidth  = 1280
-	screenHeight = 640
+var (
+	screenWidth  float32 = 1280
+	screenHeight float32 = 640
+	zoom         float32
+	romPtr       = flag.String("rom", "", "ROM to load (Required)")
+	widthPtr     = flag.Int("width", 1280, "Screen width (Optional)")
 )
 
-var zoom float32
-
 func init() {
+	flag.StringVar(romPtr, "r", "", "Same as -rom")
+	flag.IntVar(widthPtr, "w", 1280, "Same as -width")
 	runtime.LockOSThread()
 }
 
 func main() {
-	romPtr := flag.String("rom", "", "ROM to load (Required)")
 	flag.Parse()
 
 	if *romPtr == "" {
@@ -35,6 +37,10 @@ func main() {
 	if _, err := os.Stat("./roms/" + strings.ToUpper(*romPtr)); os.IsNotExist(err) {
 		fmt.Println(*romPtr, "is not a valid ROM")
 		os.Exit(1)
+	}
+	if float32(*widthPtr) != screenWidth {
+		screenWidth = float32(*widthPtr)
+		screenHeight = screenWidth / 2
 	}
 
 	err := glfw.Init()
@@ -46,7 +52,7 @@ func main() {
 	glfw.WindowHint(glfw.Resizable, glfw.False)
 	glfw.WindowHint(glfw.ContextVersionMajor, 2)
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
-	window, err := glfw.CreateWindow(screenWidth, screenHeight, "CHIP-8", nil, nil)
+	window, err := glfw.CreateWindow(int(screenWidth), int(screenHeight), "CHIP-8", nil, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +64,7 @@ func main() {
 
 	gl.MatrixMode(gl.PROJECTION)
 	gl.LoadIdentity()
-	gl.Ortho(0.0, screenWidth, screenHeight, 0.0, 1.0, -1.0)
+	gl.Ortho(0.0, float64(screenWidth), float64(screenHeight), 0.0, 1.0, -1.0)
 	gl.MatrixMode(gl.MODELVIEW)
 	gl.LoadIdentity()
 	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
