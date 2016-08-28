@@ -63,130 +63,112 @@ func (c *Chip8) Cycle() {
 	c.opcode = uint16(c.memory[c.pc])<<8 | uint16(c.memory[c.pc+1])
 	a := uint16(c.opcode & 0xf000)
 	b := uint16(c.opcode & 0x0fff)
-	xReg := uint16(c.opcode & 0xf0ff)
-	yReg := uint16(c.opcode & 0xff0f)
+	xReg := uint16(c.opcode & 0x0f00 >> 8)
+	yReg := uint16(c.opcode & 0x00f0 >> 4)
+
+	fmt.Printf("0x%X\n", c.opcode)
 
 	switch a {
-	case opSystem:
-		panic(fmt.Sprintln("The internet tells me this shouldn't happen..."))
-
-	case opClear:
-		for i := range c.display {
-			c.display[i] = 0
+	case 0x0000:
+		switch c.opcode {
+		case opSystem:
+			panic(fmt.Sprintln("The internet tells me this shouldn't happen..."))
+		case opClear:
+			for i := range c.display {
+				c.display[i] = 0
+			}
+			c.draw = true
+		case opReturn:
+			c.sp--
+			c.pc = c.stack[c.sp]
+			c.pc += 2
 		}
-		c.draw = true
-
-	case opReturn:
-		c.sp--
-		c.pc = c.stack[c.sp]
-		c.pc += 2
-
 	case opJump:
 		c.pc = b
-
 	case opCall:
 		c.stack[c.sp] = c.pc
 		c.sp++
 		c.pc = b
-
 	case opSkipIfEqual:
 		if c.v[xReg] == byte(c.opcode&0xff00) {
 			c.pc += 2
 		}
 		c.pc += 2
-
 	case opSkipIfNotEqual:
 		if c.v[xReg] != byte(c.opcode&0xff00) {
 			c.pc += 2
 		}
 		c.pc += 2
-
 	case opSkipIfEqualRegister:
 		if c.v[xReg] == c.v[yReg] {
 			c.pc += 2
 		}
-
 	case opSetValue:
 		c.v[xReg] = c.v[yReg]
 		c.pc += 2
-
 	case opAddValue:
 		c.v[xReg] = c.v[xReg] & +byte(c.opcode&0xff00)
 		c.pc += 2
-
-	case opSetRegister:
-		fmt.Printf("0x%X\n", c.opcode)
-		fmt.Printf("0x%X\n", xReg)
-		fmt.Printf("0x%X\n", yReg)
-		c.v[xReg] = c.v[yReg]
-		c.pc += 2
-
-	case opOr:
-		c.v[xReg] |= c.v[yReg]
-		c.pc += 2
-
-	case opAnd:
-		c.v[xReg] &= c.v[yReg]
-		c.pc += 2
-
-	case opXor:
-		c.v[xReg] ^= c.v[yReg]
-		c.pc += 2
-
-	case opAddRegister:
-		if c.v[(c.opcode&0x00f0)>>4] > (0xff - c.v[(c.opcode&0x0f00)>>8]) {
-			c.v[0xf] = 1
-		} else {
-			c.v[0xf] = 0
+	case 0x8000:
+		switch c.opcode & 0x000f {
+		case 0x0:
+			c.v[xReg] = c.v[yReg]
+			c.pc += 2
+		case 0x1:
+			c.v[xReg] |= c.v[yReg]
+			c.pc += 2
+		case 0x2:
+			c.v[xReg] &= c.v[yReg]
+			c.pc += 2
+		case 0x3:
+			c.v[xReg] ^= c.v[yReg]
+			c.pc += 2
+		case 0x4:
+			if c.v[(c.opcode&0x00f0)>>4] > (0xff - c.v[(c.opcode&0x0f00)>>8]) {
+				c.v[0xf] = 1
+			} else {
+				c.v[0xf] = 0
+			}
+			c.v[(c.opcode&0x0f00)>>8] += c.v[(c.opcode&0x00f0)>>4]
+			c.pc += 2
+		case 0x5:
+			if c.v[xReg] < c.v[yReg] {
+				c.v[0xf] = 0
+			} else {
+				c.v[0xf] = 1
+			}
+			c.v[xReg] = c.v[xReg] & -c.v[yReg]
+			c.pc += 2
+		case 0x6:
+			c.v[0xf] = c.v[xReg] & 1
+			c.v[xReg] >>= 1
+			c.pc += 2
+		case 0x7:
+			if c.v[yReg] < c.v[xReg] {
+				c.v[0xf] = 0
+			} else {
+				c.v[0xf] = 1
+			}
+			c.v[xReg] = c.v[yReg] & -c.v[xReg]
+			c.pc += 2
+		case 0xe:
+			c.v[0xf] = (c.v[xReg] & 0x08) >> 7
+			c.v[xReg] <<= 1
+			c.pc += 2
 		}
-		c.v[(c.opcode&0x0f00)>>8] += c.v[(c.opcode&0x00f0)>>4]
-		c.pc += 2
-
-	case opSubtractYFromX:
-		if c.v[xReg] < c.v[yReg] {
-			c.v[0xf] = 0
-		} else {
-			c.v[0xf] = 1
-		}
-		c.v[xReg] = c.v[xReg] & -c.v[yReg]
-		c.pc += 2
-
-	case opShiftRight:
-		c.v[0xf] = c.v[xReg] & 1
-		c.v[xReg] >>= 1
-		c.pc += 2
-
-	case opSubtractXFromY:
-		if c.v[yReg] < c.v[xReg] {
-			c.v[0xf] = 0
-		} else {
-			c.v[0xf] = 1
-		}
-		c.v[xReg] = c.v[yReg] & -c.v[xReg]
-		c.pc += 2
-
-	case opShiftLeft:
-		c.v[0xf] = (c.v[xReg] & 0x08) >> 7
-		c.v[xReg] <<= 1
-		c.pc += 2
-
 	case opSkipIfNotEqualRegister:
 		if c.v[xReg] != c.v[yReg] {
 			c.pc += 2
 		}
 		c.pc += 2
-
 	case opSetIndex:
 		c.i = c.opcode & 0x0fff
 		c.pc += 2
-
 	case opJumpRelative:
 		c.pc = b + uint16(c.v[0])
-
 	case opAndRandom:
 		c.v[xReg] = byte(rand.Int()) & byte(c.opcode&0xff00)
 		c.pc += 2
-
 	case opDraw:
 		x := uint16(c.v[(c.opcode&0x0f00)>>8])
 		y := uint16(c.v[(c.opcode&0x00f0)>>4])
@@ -206,63 +188,62 @@ func (c *Chip8) Cycle() {
 		}
 		c.draw = true
 		c.pc += 2
-
-	case opSkipIfKeyPressed:
-		if c.key[c.v[(c.opcode&0x0f00)>>8]] != 0 {
+	case 0xe000:
+		switch c.opcode & 0x00ff {
+		case 0x9e:
+			if c.key[c.v[(c.opcode&0x0f00)>>8]] != 0 {
+				c.pc += 2
+			}
+			c.pc += 2
+		case 0xa1:
+			if c.key[c.v[(c.opcode&0x0f00)>>8]] == 0 {
+				c.pc += 2
+			}
 			c.pc += 2
 		}
-		c.pc += 2
+	case 0xf000:
+		last1 := c.opcode & 0x000f
+		last2 := c.opcode & 0x00ff
+		switch last1 {
+		case 0x7:
+			c.v[xReg] = c.delayTimer
+			c.pc += 2
+		case 0xa:
+			//TODO Implement
+		}
 
-	case opSkipIfKeyNotPressed:
-		if c.key[c.v[(c.opcode&0x0f00)>>8]] == 0 {
+		switch last2 {
+		case 0x15:
+			c.delayTimer = c.v[xReg]
+		case 0x18:
+			c.soundTimer = c.v[xReg]
+		case 0x1e:
+			if (uint16(c.v[xReg]) + c.i) > uint16(0xfff) {
+				c.v[0xf] = 1
+			} else {
+				c.v[0xf] = 0
+			}
+			c.i += uint16(c.v[xReg])
+			c.pc += 2
+		case 0x29:
+			c.i = uint16(c.v[xReg] * 5)
+			c.pc += 2
+		case 0x33:
+			c.memory[c.i] = c.v[(c.opcode&0x0f00)>>8] / 100
+			c.memory[c.i+1] = (c.v[(c.opcode&0x0f00)>>8] / 10) % 10
+			c.memory[c.i+2] = (c.v[(c.opcode&0x0f00)>>8] % 100) % 10
+			c.pc += 2
+		case 0x55:
+			for i := uint16(0); i < xReg; i++ {
+				c.memory[c.i+i] = c.v[i]
+			}
+			c.pc += 2
+		case 0x65:
+			for i := uint16(0); i < xReg; i++ {
+				c.v[i] = c.memory[c.i+i]
+			}
 			c.pc += 2
 		}
-		c.pc += 2
-
-	case opStoreDelayTimer:
-		c.v[xReg] = c.delayTimer
-		c.pc += 2
-
-	case opAwaitKeyPress:
-		//TODO Implement
-
-	case opSetDelayTimer:
-		c.delayTimer = c.v[xReg]
-
-	case opSetSoundTimer:
-		c.soundTimer = c.v[xReg]
-
-	case opAddIndex:
-		if (uint16(c.v[xReg]) + c.i) > uint16(0xfff) {
-			c.v[0xf] = 1
-		} else {
-			c.v[0xf] = 0
-		}
-		c.i += uint16(c.v[xReg])
-		c.pc += 2
-
-	case opSetIndexFontCharacter:
-		c.i = uint16(c.v[xReg] * 5)
-		c.pc += 2
-
-	case opStoreBCD:
-		c.memory[c.i] = c.v[(c.opcode&0x0f00)>>8] / 100
-		c.memory[c.i+1] = (c.v[(c.opcode&0x0f00)>>8] / 10) % 10
-		c.memory[c.i+2] = (c.v[(c.opcode&0x0f00)>>8] % 100) % 10
-		c.pc += 2
-
-	case opWriteMemory:
-		for i := uint16(0); i < xReg; i++ {
-			c.memory[c.i+i] = c.v[i]
-		}
-		c.pc += 2
-
-	case opReadMemory:
-		for i := uint16(0); i < xReg; i++ {
-			c.v[i] = c.memory[c.i+i]
-		}
-		c.pc += 2
-
 	default:
 		panic(fmt.Sprintf("Unknown opcode: 0x%X", c.opcode))
 	}

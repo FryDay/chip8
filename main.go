@@ -12,10 +12,8 @@ func main() {
 	//input
 
 	chip8.Initialize()
-	rom, _ := ioutil.ReadFile("./roms/BLINKY")
+	rom, _ := ioutil.ReadFile("./roms/TETRIS")
 	chip8.LoadROM(rom)
-
-	//fmt.Println(chip8.Memory)
 
 	for {
 		chip8.Cycle()
