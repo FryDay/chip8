@@ -70,61 +70,61 @@ func (c *Chip8) Cycle() {
 	switch a {
 	case 0x0000:
 		switch c.opcode {
-		case opSystem:
+		case 0x0000: // Unused
 			panic(fmt.Sprintln("The internet tells me this shouldn't happen..."))
-		case opClear:
+		case 0x00e0: // Clear
 			for i := range c.Display {
 				c.Display[i] = 0
 			}
 			c.Draw = true
 			c.pc += 2
-		case opReturn:
+		case 0x00ee: // Return
 			c.sp--
 			c.pc = c.stack[c.sp]
 			c.pc += 2
 		}
-	case opJump:
+	case 0x1000: // Jump
 		c.pc = b
-	case opCall:
+	case 0x2000: // Call
 		c.stack[c.sp] = c.pc
 		c.sp++
 		c.pc = b
-	case opSkipIfEqual:
+	case 0x3000: // Skip if Equal
 		if c.v[xReg] == byte(c.opcode&0x00ff) {
 			c.pc += 2
 		}
 		c.pc += 2
-	case opSkipIfNotEqual:
+	case 0x4000: // Skip if Not Equal
 		if c.v[xReg] != byte(c.opcode&0x00ff) {
 			c.pc += 2
 		}
 		c.pc += 2
-	case opSkipIfEqualRegister:
+	case 0x5000: // Skip if x Register Equals y Register
 		if c.v[xReg] == c.v[yReg] {
 			c.pc += 2
 		}
 		c.pc += 2
-	case opSetValue:
+	case 0x6000: // Set Value
 		c.v[xReg] = byte(c.opcode & 0x00ff)
 		c.pc += 2
-	case opAddValue:
+	case 0x7000: // Add Value
 		c.v[xReg] += byte(c.opcode & 0x00ff)
 		c.pc += 2
 	case 0x8000:
 		switch c.opcode & 0x000f {
-		case 0x0:
+		case 0x0: // Set x Register to y Register
 			c.v[xReg] = c.v[yReg]
 			c.pc += 2
-		case 0x1:
+		case 0x1: // Or
 			c.v[xReg] |= c.v[yReg]
 			c.pc += 2
-		case 0x2:
+		case 0x2: // And
 			c.v[xReg] &= c.v[yReg]
 			c.pc += 2
-		case 0x3:
+		case 0x3: // Xor
 			c.v[xReg] ^= c.v[yReg]
 			c.pc += 2
-		case 0x4:
+		case 0x4: // Add y Register to x Register
 			if c.v[yReg] > (0xff - c.v[xReg]) {
 				c.v[0xf] = 1
 			} else {
@@ -132,7 +132,7 @@ func (c *Chip8) Cycle() {
 			}
 			c.v[xReg] += c.v[yReg]
 			c.pc += 2
-		case 0x5:
+		case 0x5: // Subtract y Register from x Register
 			if c.v[yReg] > c.v[xReg] {
 				c.v[0xf] = 0
 			} else {
@@ -140,11 +140,11 @@ func (c *Chip8) Cycle() {
 			}
 			c.v[xReg] -= c.v[yReg]
 			c.pc += 2
-		case 0x6:
+		case 0x6: // Shift x Register Right by 1
 			c.v[0xf] = c.v[xReg] & 1
 			c.v[xReg] >>= 1 //Not sure if right
 			c.pc += 2
-		case 0x7:
+		case 0x7: // Sets x Register to y Register Minus x Register
 			if c.v[yReg] < c.v[xReg] {
 				c.v[0xf] = 0
 			} else {
@@ -152,25 +152,25 @@ func (c *Chip8) Cycle() {
 			}
 			c.v[xReg] = c.v[yReg] - c.v[xReg]
 			c.pc += 2
-		case 0xe:
+		case 0xe: // Shift x Register Left by 1
 			c.v[0xf] = c.v[xReg] >> 7
 			c.v[xReg] <<= 1 // Not sure if right
 			c.pc += 2
 		}
-	case opSkipIfNotEqualRegister:
+	case 0x9000: // Skip if x Register Not Equal y Register
 		if c.v[xReg] != c.v[yReg] {
 			c.pc += 2
 		}
 		c.pc += 2
-	case opSetIndex:
+	case 0xa000: // Sets i to NNN
 		c.i = c.opcode & 0x0fff
 		c.pc += 2
-	case opJumpRelative:
+	case 0xb000: // Jumps to Address NNN Plus v0
 		c.pc = b + uint16(c.v[0])
-	case opAndRandom:
+	case 0xc000: // Sets x Register to Bitwise And on Random and NNN
 		c.v[xReg] = byte(rand.New(rand.NewSource(time.Now().UnixNano())).Intn(255)) & byte(c.opcode&0x00ff)
 		c.pc += 2
-	case opDraw:
+	case 0xd000: // Draw
 		x := uint16(c.v[(c.opcode&0x0f00)>>8])
 		y := uint16(c.v[(c.opcode&0x00f0)>>4])
 		height := uint16(c.opcode & 0x000f)
@@ -191,36 +191,34 @@ func (c *Chip8) Cycle() {
 		c.pc += 2
 	case 0xe000:
 		switch c.opcode & 0x00ff {
-		case 0x9e:
+		case 0x9e: // Skip If Key Pressed
 			if c.key[c.v[(c.opcode&0x0f00)>>8]] != 0 {
 				c.pc += 2
 			}
 			c.pc += 2
-		case 0xa1:
+		case 0xa1: // Skip If Key Not Pressed
 			if c.key[c.v[(c.opcode&0x0f00)>>8]] == 0 {
 				c.pc += 2
 			}
 			c.pc += 2
 		}
 	case 0xf000:
-		last1 := c.opcode & 0x000f
-		last2 := c.opcode & 0x00ff
-		switch last1 {
-		case 0x7:
+		switch c.opcode & 0x000f {
+		case 0x7: // Store Delay Timer
 			c.v[xReg] = c.delayTimer
 			c.pc += 2
-		case 0xa:
+		case 0xa: // Await Key Press
 			//TODO Implement
 		}
 
-		switch last2 {
-		case 0x15:
+		switch c.opcode & 0x00ff {
+		case 0x15: // Set Delay Timer
 			c.delayTimer = c.v[xReg]
 			c.pc += 2
-		case 0x18:
+		case 0x18: // Set Sound Timer
 			c.soundTimer = c.v[xReg]
 			c.pc += 2
-		case 0x1e:
+		case 0x1e: // Add Index
 			if (uint16(c.v[xReg]) + c.i) > uint16(0xfff) {
 				c.v[0xf] = 1
 			} else {
@@ -228,21 +226,21 @@ func (c *Chip8) Cycle() {
 			}
 			c.i += uint16(c.v[xReg])
 			c.pc += 2
-		case 0x29:
+		case 0x29: // Set Index Font Character
 			c.i = uint16(c.v[xReg] * 0x5)
 			c.pc += 2
-		case 0x33:
+		case 0x33: // Store BCD
 			c.memory[c.i] = c.v[xReg] / 100
 			c.memory[c.i+1] = (c.v[xReg] / 10) % 10
 			c.memory[c.i+2] = (c.v[xReg] % 100) % 10
 			c.pc += 2
-		case 0x55:
+		case 0x55: // Write Memory
 			for i := uint16(0); i <= xReg; i++ {
 				c.memory[c.i+i] = c.v[i]
 			}
 
 			c.pc += 2
-		case 0x65:
+		case 0x65: // Read Memory
 			for i := uint16(0); i <= xReg; i++ {
 				c.v[i] = c.memory[c.i+i]
 			}
