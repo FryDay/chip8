@@ -51,7 +51,7 @@ func main() {
 	//input
 
 	chip8.Initialize()
-	rom, _ := ioutil.ReadFile("./roms/TETRIS")
+	rom, _ := ioutil.ReadFile("./roms/TICTAC")
 	chip8.LoadROM(rom)
 
 	for !window.ShouldClose() {
@@ -77,7 +77,7 @@ func render(d []byte) {
 	var row float32
 	var col float32
 	for i := range d {
-		if col > 31 {
+		if col > 63 {
 			row++
 			col = 0
 		}
