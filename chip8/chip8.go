@@ -3,6 +3,7 @@ package chip8
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 type Chip8 struct {
@@ -11,8 +12,8 @@ type Chip8 struct {
 	v          [16]byte
 	i          uint16
 	pc         uint16
-	draw       bool
-	display    [64 * 32]byte
+	Draw       bool
+	Display    [64 * 32]byte
 	delayTimer byte
 	soundTimer byte
 	stack      [16]uint16
@@ -45,7 +46,7 @@ func (c *Chip8) Initialize() {
 	c.i = 0
 	c.sp = 0
 
-	c.draw = false
+	c.Draw = false
 	for i := 0; i < 16; i++ {
 		c.stack[i] = 0
 		c.v[i] = 0
@@ -66,18 +67,17 @@ func (c *Chip8) Cycle() {
 	xReg := uint16(c.opcode & 0x0f00 >> 8)
 	yReg := uint16(c.opcode & 0x00f0 >> 4)
 
-	// fmt.Printf("0x%X\n", c.opcode)
-
 	switch a {
 	case 0x0000:
 		switch c.opcode {
 		case opSystem:
 			panic(fmt.Sprintln("The internet tells me this shouldn't happen..."))
 		case opClear:
-			for i := range c.display {
-				c.display[i] = 0
+			for i := range c.Display {
+				c.Display[i] = 0
 			}
-			c.draw = true
+			c.Draw = true
+			c.pc += 2
 		case opReturn:
 			c.sp--
 			c.pc = c.stack[c.sp]
@@ -90,12 +90,12 @@ func (c *Chip8) Cycle() {
 		c.sp++
 		c.pc = b
 	case opSkipIfEqual:
-		if c.v[xReg] == byte(c.opcode&0xff00) {
+		if c.v[xReg] == byte(c.opcode&0x00ff) {
 			c.pc += 2
 		}
 		c.pc += 2
 	case opSkipIfNotEqual:
-		if c.v[xReg] != byte(c.opcode&0xff00) {
+		if c.v[xReg] != byte(c.opcode&0x00ff) {
 			c.pc += 2
 		}
 		c.pc += 2
@@ -103,11 +103,12 @@ func (c *Chip8) Cycle() {
 		if c.v[xReg] == c.v[yReg] {
 			c.pc += 2
 		}
+		c.pc += 2
 	case opSetValue:
-		c.v[xReg] = c.v[yReg]
+		c.v[xReg] = byte(c.opcode & 0x00ff)
 		c.pc += 2
 	case opAddValue:
-		c.v[xReg] = c.v[xReg] & +byte(c.opcode&0xff00)
+		c.v[xReg] += byte(c.opcode & 0x00ff)
 		c.pc += 2
 	case 0x8000:
 		switch c.opcode & 0x000f {
@@ -124,24 +125,24 @@ func (c *Chip8) Cycle() {
 			c.v[xReg] ^= c.v[yReg]
 			c.pc += 2
 		case 0x4:
-			if c.v[(c.opcode&0x00f0)>>4] > (0xff - c.v[(c.opcode&0x0f00)>>8]) {
+			if c.v[yReg] > (0xff - c.v[xReg]) {
 				c.v[0xf] = 1
 			} else {
 				c.v[0xf] = 0
 			}
-			c.v[(c.opcode&0x0f00)>>8] += c.v[(c.opcode&0x00f0)>>4]
+			c.v[xReg] += c.v[yReg]
 			c.pc += 2
 		case 0x5:
-			if c.v[xReg] < c.v[yReg] {
+			if c.v[yReg] > c.v[xReg] {
 				c.v[0xf] = 0
 			} else {
 				c.v[0xf] = 1
 			}
-			c.v[xReg] = c.v[xReg] & -c.v[yReg]
+			c.v[xReg] -= c.v[yReg]
 			c.pc += 2
 		case 0x6:
 			c.v[0xf] = c.v[xReg] & 1
-			c.v[xReg] >>= 1
+			c.v[xReg] >>= 1 //Not sure if right
 			c.pc += 2
 		case 0x7:
 			if c.v[yReg] < c.v[xReg] {
@@ -149,11 +150,11 @@ func (c *Chip8) Cycle() {
 			} else {
 				c.v[0xf] = 1
 			}
-			c.v[xReg] = c.v[yReg] & -c.v[xReg]
+			c.v[xReg] = c.v[yReg] - c.v[xReg]
 			c.pc += 2
 		case 0xe:
-			c.v[0xf] = (c.v[xReg] & 0x08) >> 7
-			c.v[xReg] <<= 1
+			c.v[0xf] = c.v[xReg] >> 7
+			c.v[xReg] <<= 1 // Not sure if right
 			c.pc += 2
 		}
 	case opSkipIfNotEqualRegister:
@@ -167,7 +168,7 @@ func (c *Chip8) Cycle() {
 	case opJumpRelative:
 		c.pc = b + uint16(c.v[0])
 	case opAndRandom:
-		c.v[xReg] = byte(rand.Int()) & byte(c.opcode&0xff00)
+		c.v[xReg] = byte(rand.New(rand.NewSource(time.Now().UnixNano())).Intn(255)) & byte(c.opcode&0x00ff)
 		c.pc += 2
 	case opDraw:
 		x := uint16(c.v[(c.opcode&0x0f00)>>8])
@@ -179,14 +180,14 @@ func (c *Chip8) Cycle() {
 			pixel = uint16(c.memory[c.i+yLine])
 			for xLine := uint16(0); xLine < 8; xLine++ {
 				if (pixel & (0x80 >> xLine)) != 0 {
-					if c.display[x+xLine+((y+yLine)*64)] == 1 {
+					if c.Display[x+xLine+((y+yLine)*64)] == 1 {
 						c.v[0xf] = 1
-						c.display[x+xLine+((y+yLine)*64)] ^= 1
 					}
+					c.Display[x+xLine+((y+yLine)*64)] ^= 1
 				}
 			}
 		}
-		c.draw = true
+		c.Draw = true
 		c.pc += 2
 	case 0xe000:
 		switch c.opcode & 0x00ff {
@@ -215,8 +216,10 @@ func (c *Chip8) Cycle() {
 		switch last2 {
 		case 0x15:
 			c.delayTimer = c.v[xReg]
+			c.pc += 2
 		case 0x18:
 			c.soundTimer = c.v[xReg]
+			c.pc += 2
 		case 0x1e:
 			if (uint16(c.v[xReg]) + c.i) > uint16(0xfff) {
 				c.v[0xf] = 1
@@ -226,22 +229,24 @@ func (c *Chip8) Cycle() {
 			c.i += uint16(c.v[xReg])
 			c.pc += 2
 		case 0x29:
-			c.i = uint16(c.v[xReg] * 5)
+			c.i = uint16(c.v[xReg] * 0x5)
 			c.pc += 2
 		case 0x33:
-			c.memory[c.i] = c.v[(c.opcode&0x0f00)>>8] / 100
-			c.memory[c.i+1] = (c.v[(c.opcode&0x0f00)>>8] / 10) % 10
-			c.memory[c.i+2] = (c.v[(c.opcode&0x0f00)>>8] % 100) % 10
+			c.memory[c.i] = c.v[xReg] / 100
+			c.memory[c.i+1] = (c.v[xReg] / 10) % 10
+			c.memory[c.i+2] = (c.v[xReg] % 100) % 10
 			c.pc += 2
 		case 0x55:
-			for i := uint16(0); i < xReg; i++ {
+			for i := uint16(0); i <= xReg; i++ {
 				c.memory[c.i+i] = c.v[i]
 			}
+
 			c.pc += 2
 		case 0x65:
-			for i := uint16(0); i < xReg; i++ {
+			for i := uint16(0); i <= xReg; i++ {
 				c.v[i] = c.memory[c.i+i]
 			}
+			c.i += uint16(c.v[xReg]) + 1
 			c.pc += 2
 		}
 	default:
@@ -255,14 +260,22 @@ func (c *Chip8) Cycle() {
 		fmt.Println("BEEP")
 		c.soundTimer--
 	}
+
+	//DEBUG
+	// d := 0
+	// for i := range c.Display {
+	// 	if d > 31 {
+	// 		d = 0
+	// 		fmt.Print("\n")
+	// 	}
+	// 	fmt.Print(c.Display[i])
+	// 	d++
+	// }
+	//END-DEBUG
 }
 
 func (c *Chip8) LoadROM(r []byte) {
 	for i := range r {
 		c.memory[i+512] = r[i]
 	}
-}
-
-func (c *Chip8) Draw() bool {
-	return c.draw
 }
