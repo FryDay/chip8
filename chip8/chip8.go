@@ -260,22 +260,9 @@ func (c *Chip8) Cycle() {
 		fmt.Println("BEEP")
 		c.soundTimer--
 	}
-
-	//DEBUG
-	// d := 0
-	// for i := range c.Display {
-	// 	if d > 31 {
-	// 		d = 0
-	// 		fmt.Print("\n")
-	// 	}
-	// 	fmt.Print(c.Display[i])
-	// 	d++
-	// }
-	//END-DEBUG
 }
 
 func (c *Chip8) LoadROM(r []byte) {
-	for i := range r {
-		c.memory[i+512] = r[i]
-	}
+	progSpace := c.memory[512:]
+	copy(progSpace, r)
 }

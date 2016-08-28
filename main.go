@@ -51,7 +51,7 @@ func main() {
 	//input
 
 	chip8.Initialize()
-	rom, _ := ioutil.ReadFile("./roms/TICTAC")
+	rom, _ := ioutil.ReadFile("./roms/INVADERS")
 	chip8.LoadROM(rom)
 
 	for !window.ShouldClose() {
@@ -68,27 +68,30 @@ func main() {
 }
 
 func render(d []byte) {
+	var row float32
+	var col float32
+	var colZoom float32
+	var rowZoom float32
+
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 	gl.MatrixMode(gl.MODELVIEW)
 	gl.LoadIdentity()
 
 	gl.Begin(gl.QUADS)
-
-	var row float32
-	var col float32
 	for i := range d {
 		if col > 63 {
 			row++
 			col = 0
 		}
 		if d[i] == 1 {
-			gl.Vertex2f(col*zoom, row*zoom)
-			gl.Vertex2f(col*zoom, row*zoom+zoom)
-			gl.Vertex2f(col*zoom+zoom, row*zoom+zoom)
-			gl.Vertex2f(col*zoom+zoom, row*zoom)
+			colZoom = col * zoom
+			rowZoom = row * zoom
+			gl.Vertex2f(colZoom, rowZoom)
+			gl.Vertex2f(colZoom, rowZoom+zoom)
+			gl.Vertex2f(colZoom+zoom, rowZoom+zoom)
+			gl.Vertex2f(colZoom+zoom, rowZoom)
 		}
 		col++
 	}
-
 	gl.End()
 }
