@@ -66,7 +66,7 @@ func (c *Chip8) Cycle() {
 	xReg := uint16(c.opcode & 0x0f00 >> 8)
 	yReg := uint16(c.opcode & 0x00f0 >> 4)
 
-	fmt.Printf("0x%X\n", c.opcode)
+	// fmt.Printf("0x%X\n", c.opcode)
 
 	switch a {
 	case 0x0000:
@@ -261,4 +261,8 @@ func (c *Chip8) LoadROM(r []byte) {
 	for i := range r {
 		c.memory[i+512] = r[i]
 	}
+}
+
+func (c *Chip8) Draw() bool {
+	return c.draw
 }
