@@ -209,6 +209,7 @@ func (c *Chip8) Cycle() {
 			c.pc += 2
 		case 0xa: // Await Key Press
 			//TODO Implement
+			c.pc += 2
 		}
 
 		switch c.opcode & 0x00ff {
@@ -260,7 +261,7 @@ func (c *Chip8) Cycle() {
 	}
 }
 
-func (c *Chip8) LoadROM(r []byte) {
+func (c *Chip8) LoadROM(rom []byte) {
 	progSpace := c.memory[512:]
-	copy(progSpace, r)
+	copy(progSpace, rom)
 }
