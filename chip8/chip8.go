@@ -10,7 +10,7 @@ type Chip8 struct {
 	opcode     uint16
 	memory     [4096]byte
 	v          [16]byte
-	i          uint16
+	index      uint16
 	pc         uint16
 	Draw       bool
 	Display    [64 * 32]byte
@@ -43,7 +43,7 @@ var font = [80]byte{
 func (c *Chip8) Initialize() {
 	c.pc = 0x200
 	c.opcode = 0
-	c.i = 0
+	c.index = 0
 	c.sp = 0
 
 	c.Draw = false
@@ -142,7 +142,7 @@ func (c *Chip8) Cycle() {
 			c.pc += 2
 		case 0x6: // Shift x Register Right by 1
 			c.v[0xf] = c.v[xReg] & 1
-			c.v[xReg] >>= 1 //Not sure if right
+			c.v[xReg] >>= 1
 			c.pc += 2
 		case 0x7: // Sets x Register to y Register Minus x Register
 			if c.v[yReg] < c.v[xReg] {
@@ -154,7 +154,7 @@ func (c *Chip8) Cycle() {
 			c.pc += 2
 		case 0xe: // Shift x Register Left by 1
 			c.v[0xf] = c.v[xReg] >> 7
-			c.v[xReg] <<= 1 // Not sure if right
+			c.v[xReg] <<= 1
 			c.pc += 2
 		}
 	case 0x9000: // Skip if x Register Not Equal y Register
@@ -163,7 +163,7 @@ func (c *Chip8) Cycle() {
 		}
 		c.pc += 2
 	case 0xa000: // Sets i to NNN
-		c.i = c.opcode & 0x0fff
+		c.index = c.opcode & 0x0fff
 		c.pc += 2
 	case 0xb000: // Jumps to Address NNN Plus v0
 		c.pc = b + uint16(c.v[0])
@@ -177,7 +177,7 @@ func (c *Chip8) Cycle() {
 		var pixel uint16
 		c.v[0xf] = 0
 		for yLine := uint16(0); yLine < height; yLine++ {
-			pixel = uint16(c.memory[c.i+yLine])
+			pixel = uint16(c.memory[c.index+yLine])
 			for xLine := uint16(0); xLine < 8; xLine++ {
 				if (pixel & (0x80 >> xLine)) != 0 {
 					if c.Display[x+xLine+((y+yLine)*64)] == 1 {
@@ -192,27 +192,26 @@ func (c *Chip8) Cycle() {
 	case 0xe000:
 		switch c.opcode & 0x00ff {
 		case 0x9e: // Skip If Key Pressed
-			if c.key[c.v[(c.opcode&0x0f00)>>8]] != 0 {
-				c.pc += 2
-			}
-			c.pc += 2
-		case 0xa1: // Skip If Key Not Pressed
-			if c.key[c.v[(c.opcode&0x0f00)>>8]] == 0 {
-				c.pc += 2
-			}
-			c.pc += 2
-		}
-	case 0xf000:
-		switch c.opcode & 0x000f {
-		case 0x7: // Store Delay Timer
-			c.v[xReg] = c.delayTimer
-			c.pc += 2
-		case 0xa: // Await Key Press
+			// if c.key[c.v[xReg]] != 0 {
+			// 	c.pc += 2
+			// }
 			//TODO Implement
 			c.pc += 2
+		case 0xa1: // Skip If Key Not Pressed
+			// if c.key[c.v[(c.opcode&0x0f00)>>8]] == 0 {
+			// 	c.pc += 2
+			// }
+			//TODO Implement
+			c.pc += 4 // Will be 2
 		}
-
+	case 0xf000:
 		switch c.opcode & 0x00ff {
+		case 0x07: // Store Delay Timer
+			c.v[xReg] = c.delayTimer
+			c.pc += 2
+		case 0x0a: // Await Key Press
+			//TODO Implement
+			c.pc += 2
 		case 0x15: // Set Delay Timer
 			c.delayTimer = c.v[xReg]
 			c.pc += 2
@@ -220,32 +219,32 @@ func (c *Chip8) Cycle() {
 			c.soundTimer = c.v[xReg]
 			c.pc += 2
 		case 0x1e: // Add Index
-			if (uint16(c.v[xReg]) + c.i) > uint16(0xfff) {
+			if (uint16(c.v[xReg]) + c.index) > uint16(0xfff) {
 				c.v[0xf] = 1
 			} else {
 				c.v[0xf] = 0
 			}
-			c.i += uint16(c.v[xReg])
+			c.index += uint16(c.v[xReg])
 			c.pc += 2
 		case 0x29: // Set Index Font Character
-			c.i = uint16(c.v[xReg] * 0x5)
+			c.index = uint16(c.v[xReg] * 0x5)
 			c.pc += 2
 		case 0x33: // Store BCD
-			c.memory[c.i] = c.v[xReg] / 100
-			c.memory[c.i+1] = (c.v[xReg] / 10) % 10
-			c.memory[c.i+2] = (c.v[xReg] % 100) % 10
+			c.memory[c.index] = c.v[xReg] / 100
+			c.memory[c.index+1] = (c.v[xReg] / 10) % 10
+			c.memory[c.index+2] = (c.v[xReg] % 100) % 10
 			c.pc += 2
 		case 0x55: // Write Memory
 			for i := uint16(0); i <= xReg; i++ {
-				c.memory[c.i+i] = c.v[i]
+				c.memory[c.index+i] = c.v[i]
 			}
 
 			c.pc += 2
 		case 0x65: // Read Memory
 			for i := uint16(0); i <= xReg; i++ {
-				c.v[i] = c.memory[c.i+i]
+				c.v[i] = c.memory[c.index+i]
 			}
-			c.i += uint16(c.v[xReg]) + 1
+			c.index += uint16(c.v[xReg]) + 1
 			c.pc += 2
 		}
 	default:
