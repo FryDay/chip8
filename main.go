@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	screenWidth          = 640
-	screenHeight         = 320
-	zoom         float32 = 10
+	screenWidth  = 1280
+	screenHeight = 640
 )
+
+var zoom float32
 
 func init() {
 	runtime.LockOSThread()
@@ -45,6 +46,8 @@ func main() {
 	gl.MatrixMode(gl.MODELVIEW)
 	gl.LoadIdentity()
 	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
+
+	zoom = screenWidth / 64
 
 	chip8 := chip8.Chip8{}
 
