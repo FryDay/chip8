@@ -1,8 +1,12 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"io/ioutil"
+	"os"
 	"runtime"
+	"strings"
 
 	"github.com/FryDay/chip8/chip8"
 	"github.com/go-gl/gl/v2.1/gl"
@@ -21,6 +25,18 @@ func init() {
 }
 
 func main() {
+	romPtr := flag.String("rom", "", "ROM to load (Required)")
+	flag.Parse()
+
+	if *romPtr == "" {
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+	if _, err := os.Stat("./roms/" + strings.ToUpper(*romPtr)); os.IsNotExist(err) {
+		fmt.Println(*romPtr, "is not a valid ROM")
+		os.Exit(1)
+	}
+
 	err := glfw.Init()
 	if err != nil {
 		panic(err)
@@ -54,7 +70,7 @@ func main() {
 	//input
 
 	chip8.Initialize()
-	rom, _ := ioutil.ReadFile("./roms/INVADERS")
+	rom, _ := ioutil.ReadFile("./roms/" + strings.ToUpper(*romPtr))
 	chip8.LoadROM(rom)
 
 	for !window.ShouldClose() {
