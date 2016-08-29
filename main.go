@@ -80,13 +80,13 @@ func main() {
 	chip8.LoadROM(rom)
 
 	for !window.ShouldClose() {
-		for !chip8.Draw {
-			chip8.Cycle()
+		chip8.Cycle()
+		if chip8.Draw {
+			render(chip8.Display[:])
+			window.SwapBuffers()
+			chip8.Draw = false
 		}
-		render(chip8.Display[:])
-		chip8.Draw = false
 
-		window.SwapBuffers()
 		glfw.PollEvents()
 		// set keys
 	}
