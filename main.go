@@ -80,11 +80,11 @@ func main() {
 	chip8.LoadROM(rom)
 
 	for !window.ShouldClose() {
-		chip8.Cycle()
-		if chip8.Draw {
-			render(chip8.Display[:])
-			chip8.Draw = false
+		for !chip8.Draw {
+			chip8.Cycle()
 		}
+		render(chip8.Display[:])
+		chip8.Draw = false
 
 		window.SwapBuffers()
 		glfw.PollEvents()
