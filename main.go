@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/FryDay/chip8/chip8"
-	"github.com/go-gl/gl/v2.1/gl"
+	"github.com/go-gl/gl/v3.3-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
@@ -49,9 +49,10 @@ func main() {
 	}
 	defer glfw.Terminate()
 
+	glfw.WindowHint(glfw.ContextVersionMajor, 3)
+	glfw.WindowHint(glfw.ContextVersionMinor, 3)
+	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
 	glfw.WindowHint(glfw.Resizable, glfw.False)
-	glfw.WindowHint(glfw.ContextVersionMajor, 2)
-	glfw.WindowHint(glfw.ContextVersionMinor, 1)
 	window, err := glfw.CreateWindow(int(screenWidth), int(screenHeight), "CHIP-8", nil, nil)
 	if err != nil {
 		panic(err)
@@ -62,12 +63,10 @@ func main() {
 		panic(err)
 	}
 
-	gl.MatrixMode(gl.PROJECTION)
-	gl.LoadIdentity()
-	gl.Ortho(0.0, float64(screenWidth), float64(screenHeight), 0.0, 1.0, -1.0)
-	gl.MatrixMode(gl.MODELVIEW)
-	gl.LoadIdentity()
-	gl.ClearColor(0.0, 0.0, 0.0, 1.0)
+	w, h := window.GetFramebufferSize()
+	gl.Viewport(0, 0, int32(w), int32(h))
+	gl.ClearColor(0, 0, 0, 1)
+	window.SetKeyCallback(onKey)
 
 	zoom = screenWidth / 64
 
@@ -80,14 +79,14 @@ func main() {
 	chip8.LoadROM(rom)
 
 	for !window.ShouldClose() {
+		glfw.PollEvents()
+
 		chip8.Cycle()
 		if chip8.Draw {
 			render(chip8.Display[:])
 			window.SwapBuffers()
 			chip8.Draw = false
 		}
-
-		glfw.PollEvents()
 		// set keys
 	}
 }
@@ -95,28 +94,26 @@ func main() {
 func render(d []byte) {
 	var row float32
 	var col float32
-	var colZoom float32
-	var rowZoom float32
+	// var colZoom float32
+	// var rowZoom float32
 
 	gl.Clear(gl.COLOR_BUFFER_BIT)
-	gl.MatrixMode(gl.MODELVIEW)
-	gl.LoadIdentity()
 
-	gl.Begin(gl.QUADS)
 	for i := range d {
 		if col > 63 {
 			row++
 			col = 0
 		}
 		if d[i] == 1 {
-			colZoom = col * zoom
-			rowZoom = row * zoom
-			gl.Vertex2f(colZoom, rowZoom)
-			gl.Vertex2f(colZoom, rowZoom+zoom)
-			gl.Vertex2f(colZoom+zoom, rowZoom+zoom)
-			gl.Vertex2f(colZoom+zoom, rowZoom)
+			// colZoom = col * zoom
+			// rowZoom = row * zoom
+			col++
 		}
-		col++
 	}
-	gl.End()
+}
+
+func onKey(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mod glfw.ModifierKey) {
+	if key == glfw.KeyEscape && action == glfw.Press {
+		w.SetShouldClose(true)
+	}
 }
