@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/FryDay/chip8/chip8"
-	"github.com/go-gl/gl/v3.3-core/gl"
+	"github.com/FryDay/chip8/graphics"
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
 
@@ -59,13 +59,6 @@ func main() {
 	}
 	window.MakeContextCurrent()
 
-	if err := gl.Init(); err != nil {
-		panic(err)
-	}
-
-	w, h := window.GetFramebufferSize()
-	gl.Viewport(0, 0, int32(w), int32(h))
-	gl.ClearColor(0, 0, 0, 1)
 	window.SetKeyCallback(onKey)
 
 	zoom = screenWidth / 64
@@ -78,37 +71,23 @@ func main() {
 	rom, _ := ioutil.ReadFile("./roms/" + strings.ToUpper(*romPtr))
 	chip8.LoadROM(rom)
 
+	w, h := window.GetFramebufferSize()
+	graphics.Initialize(w, h)
+	defer graphics.Cleanup()
+
 	for !window.ShouldClose() {
 		glfw.PollEvents()
 
-		chip8.Cycle()
-		if chip8.Draw {
-			render(chip8.Display[:])
-			window.SwapBuffers()
-			chip8.Draw = false
-		}
+		graphics.Render(chip8.Display[:])
+		window.SwapBuffers()
+
+		// chip8.Cycle()
+		// if chip8.Draw {
+		// 	graphics.Render(chip8.Display[:])
+		// 	window.SwapBuffers()
+		// 	chip8.Draw = false
+		// }
 		// set keys
-	}
-}
-
-func render(d []byte) {
-	var row float32
-	var col float32
-	// var colZoom float32
-	// var rowZoom float32
-
-	gl.Clear(gl.COLOR_BUFFER_BIT)
-
-	for i := range d {
-		if col > 63 {
-			row++
-			col = 0
-		}
-		if d[i] == 1 {
-			// colZoom = col * zoom
-			// rowZoom = row * zoom
-			col++
-		}
 	}
 }
 
