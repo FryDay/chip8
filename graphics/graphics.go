@@ -8,12 +8,17 @@ import (
 )
 
 var (
-	vao, vbo      uint32
-	shaderProgram uint32
-	verts         = []float32{
-		-0.5, -0.5, 0.0,
-		0.5, -0.5, 0.0,
-		0.0, 0.5, 0.0,
+	vao, vbo, ebo, shaderProgram uint32
+	verts                        = []float32{
+		// Triangle 1
+		0.5, 0.5, 0.0, // Top Right
+		0.5, -0.5, 0.0, // Bottom Right
+		-0.5, -0.5, 0.0, // Bottom Left
+		-0.5, 0.5, 0.0, // Top Left
+	}
+	indices = []uint32{
+		0, 1, 3, // First Triangle
+		1, 2, 3, // Second Triangle
 	}
 )
 
@@ -30,11 +35,16 @@ func Initialize(width, height int) {
 	gl.UseProgram(shaderProgram)
 
 	gl.GenVertexArrays(1, &vao)
+	gl.GenBuffers(1, &vbo)
+	gl.GenBuffers(1, &ebo)
+
 	gl.BindVertexArray(vao)
 
-	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.BufferData(gl.ARRAY_BUFFER, len(verts)*4, gl.Ptr(verts), gl.STATIC_DRAW)
+
+	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
+	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices)*4, gl.Ptr(indices), gl.STATIC_DRAW)
 
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, gl.PtrOffset(0))
 	gl.EnableVertexAttribArray(0)
@@ -54,7 +64,7 @@ func Render(d []byte) {
 
 	gl.UseProgram(shaderProgram)
 	gl.BindVertexArray(vao)
-	gl.DrawArrays(gl.TRIANGLES, 0, 3)
+	gl.DrawElements(gl.TRIANGLES, int32(len(indices)), gl.UNSIGNED_INT, nil)
 	gl.BindVertexArray(0)
 
 	// for i := range d {
