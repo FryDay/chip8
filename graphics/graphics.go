@@ -9,8 +9,8 @@ import (
 
 var (
 	vao, vbo, ebo, shaderProgram uint32
+	glFloatSize                  = int32(4)
 	verts                        = []float32{
-		// Triangle 1
 		0.5, 0.5, 0.0, // Top Right
 		0.5, -0.5, 0.0, // Bottom Right
 		-0.5, -0.5, 0.0, // Bottom Left
@@ -41,16 +41,18 @@ func Initialize(width, height int) {
 	gl.BindVertexArray(vao)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, len(verts)*4, gl.Ptr(verts), gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, len(verts)*int(glFloatSize), gl.Ptr(verts), gl.STATIC_DRAW)
 
 	gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
-	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices)*4, gl.Ptr(indices), gl.STATIC_DRAW)
+	gl.BufferData(gl.ELEMENT_ARRAY_BUFFER, len(indices)*int(glFloatSize), gl.Ptr(indices), gl.STATIC_DRAW)
 
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, gl.PtrOffset(0))
+	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 3*glFloatSize, gl.PtrOffset(0))
 	gl.EnableVertexAttribArray(0)
 
 	gl.BindBuffer(gl.ARRAY_BUFFER, 0)
 	gl.BindVertexArray(0)
+
+	// gl.PolygonMode(gl.FRONT_AND_BACK, gl.LINE)
 }
 
 // Render ...
