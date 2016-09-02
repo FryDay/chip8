@@ -27,14 +27,14 @@ func Initialize(width, height int) {
 	gl.ClearColor(0.2, 0.3, 0.3, 1.0)
 
 	shaderProgram = newProgram(vertexShaderSource, fragmentShaderSource)
-	// gl.UseProgram(shaderProgram)
+	gl.UseProgram(shaderProgram)
 
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
 
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, len(verts), gl.Ptr(verts), gl.STATIC_DRAW)
+	gl.BufferData(gl.ARRAY_BUFFER, len(verts)*4, gl.Ptr(verts), gl.STATIC_DRAW)
 
 	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, gl.PtrOffset(0))
 	gl.EnableVertexAttribArray(0)
