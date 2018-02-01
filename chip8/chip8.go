@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// Chip8 ...
 type Chip8 struct {
 	opcode     uint16
 	memory     [4096]byte
@@ -40,6 +41,7 @@ var font = [80]byte{
 	0xF0, 0x80, 0xF0, 0x80, 0x80, // F
 }
 
+// Initialize ...
 func (c *Chip8) Initialize() {
 	c.pc = 0x200
 	c.opcode = 0
@@ -60,6 +62,7 @@ func (c *Chip8) Initialize() {
 	}
 }
 
+// Cycle ...
 func (c *Chip8) Cycle() {
 	c.opcode = uint16(c.memory[c.pc])<<8 | uint16(c.memory[c.pc+1])
 	a := uint16(c.opcode & 0xf000)
@@ -260,6 +263,7 @@ func (c *Chip8) Cycle() {
 	}
 }
 
+// LoadROM ...
 func (c *Chip8) LoadROM(rom []byte) {
 	progSpace := c.memory[512:]
 	copy(progSpace, rom)
