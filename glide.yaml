@@ -1,0 +1,12 @@
+package: github.com/FryDay/chip8
+import:
+- package: github.com/go-gl/gl
+  subpackages:
+  - v2.1/gl
+- package: github.com/go-gl/glfw
+  subpackages:
+  - v3.2/glfw
+testImport:
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert

@@ -1,0 +1,24 @@
+hash: 991e8e6dfbffcf9a68e18f41ec7955f425969206f8289fa6c3281fc1139c11d2
+updated: 2018-02-01T09:05:47.891970008-06:00
+imports:
+- name: github.com/go-gl/gl
+  version: ac0d3d2af0fe995e2bb09fa6619b716b0c0fc0fa
+  subpackages:
+  - v2.1/gl
+- name: github.com/go-gl/glfw
+  version: 513e4f2bf85c31fba0fc4907abd7895242ccbe50
+  subpackages:
+  - v3.2/glfw
+testImports:
+- name: github.com/davecgh/go-spew
+  version: ecdeabc65495df2dec95d7c4a4c3e021903035e5
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: b91bfb9ebec76498946beb6af7c0230c7cc7ba6c
+  subpackages:
+  - assert
